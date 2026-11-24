@@ -388,6 +388,8 @@
    ============================================================ */
 const OCUPACAO = {
   atualizado: "2026-11-24",
+  // Segunda a quinta sempre aparecem como disponíveis (só sexta, sábado e domingo podem ficar ocupados)
+  segAQuiSempreLivre: true,
   periodos: [
     // 2026 — lotado, exceto Réveillon (31/12 a 03/01 livres)
     ["2026-11-01", "2026-12-30"],
@@ -451,7 +453,9 @@ const OCUPACAO = {
     for (let d = 1; d <= dias; d++) {
       const k = key(y, m, d);
       const e = document.createElement("div");
-      const busy = ocupadas.has(k);
+      const dow = new Date(y, m, d).getDay(); // 0 dom … 6 sáb
+      const segAQui = dow >= 1 && dow <= 4;
+      const busy = ocupadas.has(k) && (!OCUPACAO.segAQuiSempreLivre || !segAQui);
       const past = k < hojeKey;
       e.className = "cal-day" + (busy ? " busy" : "") + (past ? " past" : "") + (k === hojeKey ? " today" : "");
       e.textContent = d;
