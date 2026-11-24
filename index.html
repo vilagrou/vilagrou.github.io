@@ -173,6 +173,68 @@
     margin-left: calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
   }
 
+  /* ---------- Calendário de ocupação ---------- */
+  .cal {
+    background: #FFF8EC;
+    border: 1px solid var(--sand);
+    border-radius: 18px;
+    padding: 18px 14px 16px;
+    box-shadow: 0 4px 18px rgba(65,43,29,.08);
+  }
+  .cal h2 {
+    margin: 0 0 4px;
+    text-align: center;
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: 15px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .cal-intro { margin: 0 0 14px; text-align: center; font-style: italic; font-weight: 500; font-size: 19px; line-height: 1.25; }
+  .cal-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+  .cal-month { font-family: var(--font-display); font-size: 19px; }
+  .cal-nav {
+    width: 40px; height: 40px;
+    display: grid; place-items: center;
+    border-radius: 50%;
+    border: 1px solid var(--sand);
+    background: #fff;
+    color: var(--fg);
+    cursor: pointer;
+  }
+  .cal-nav svg { width: 18px; height: 18px; }
+  .cal-nav:disabled { opacity: .3; cursor: default; }
+  .cal-nav:focus-visible { outline: 3px solid var(--coral); outline-offset: 2px; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .cal-wd {
+    text-align: center;
+    font-family: var(--font-display);
+    font-size: 12px;
+    letter-spacing: .08em;
+    color: var(--muted);
+    padding-bottom: 4px;
+  }
+  .cal-day {
+    aspect-ratio: 1;
+    display: grid; place-items: center;
+    border-radius: 10px;
+    font-family: var(--font-display);
+    font-size: 16px;
+    background: #fff;
+    color: var(--fg);
+  }
+  .cal-day.past { background: transparent; color: rgba(65,43,29,.32); }
+  .cal-day.busy { background: var(--cta); color: #fff; text-decoration: line-through; text-decoration-thickness: 1.5px; }
+  .cal-day.busy.past { background: rgba(190,75,66,.25); color: rgba(255,255,255,.85); }
+  .cal-day.today { box-shadow: inset 0 0 0 2px var(--fg); }
+  .cal-legend { display: flex; justify-content: center; gap: 18px; margin-top: 12px; font-size: 17px; font-weight: 500; }
+  .cal-legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .cal-legend i { width: 14px; height: 14px; border-radius: 4px; display: inline-block; }
+  .cal-legend .k-busy { background: var(--cta); }
+  .cal-legend .k-free { background: #fff; box-shadow: inset 0 0 0 1px var(--sand); }
+  .cal-note { margin: 10px 0 0; text-align: center; font-size: 16px; font-style: italic; color: var(--muted); line-height: 1.3; }
+
   @media (prefers-reduced-motion: reduce) {
     .link, .group .chev { transition: none; }
     .link:hover { transform: none; }
@@ -264,6 +326,26 @@
     </li>
   </ul>
 
+  <section class="cal" id="calendario" aria-labelledby="cal-title">
+    <h2 id="cal-title">Calendário</h2>
+    <p class="cal-intro">Confira as datas já ocupadas antes de pedir seu orçamento.</p>
+    <div class="cal-head">
+      <button class="cal-nav" id="cal-prev" type="button" aria-label="Mês anterior">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+      </button>
+      <div class="cal-month" id="cal-month" aria-live="polite"></div>
+      <button class="cal-nav" id="cal-next" type="button" aria-label="Próximo mês">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+      </button>
+    </div>
+    <div class="cal-grid" id="cal-grid"></div>
+    <div class="cal-legend">
+      <span><i class="k-busy"></i>Ocupado</span>
+      <span><i class="k-free"></i>Disponível</span>
+    </div>
+    <p class="cal-note" id="cal-note">A confirmação final é feita pelo WhatsApp.</p>
+  </section>
+
   <footer class="foot">
     <div class="foot-text">Pousada Vila Grou</div>
   </footer>
@@ -272,5 +354,99 @@
   <path d="M0 50 Q120 10 260 44 T520 40 T800 34 V90 H0Z" fill="var(--dune)"/>
   <path d="M0 68 Q160 36 330 62 T640 58 T800 56 V90 H0Z" fill="var(--sand)" opacity=".55"/>
 </svg>
+<script>
+/* ============================================================
+   DATAS OCUPADAS — editar só este bloco.
+   Cada linha é um período: ["início", "fim"] (as duas datas
+   ficam marcadas). Para um dia só: ["2026-12-05"].
+   Formato da data: ano-mês-dia.
+   ============================================================ */
+const OCUPACAO = {
+  atualizado: "2026-11-24",
+  periodos: [
+    // 2026 — lotado, exceto Réveillon (31/12 a 03/01 livres)
+    ["2026-11-01", "2026-12-30"],
+    // 2027
+    ["2027-01-04", "2027-01-31"],
+    ["2027-02-05", "2027-02-07"],
+    ["2027-03-19", "2027-03-21"],
+    ["2027-04-09", "2027-04-11"],
+    ["2027-05-01", "2027-05-27"],   // maio: livres só 28, 29 e 30
+    ["2027-05-31", "2027-06-24"],   // junho: livres só 25, 26 e 27
+    ["2027-06-28", "2027-07-01"],
+    ["2027-07-05", "2027-07-08"],   // julho: livres só 02-04, 09-11, 16-18
+    ["2027-07-12", "2027-07-15"],
+    ["2027-07-19", "2027-07-31"],
+    ["2027-08-13", "2027-08-15"],
+    ["2027-10-01", "2027-10-03"],
+    ["2027-10-15", "2027-10-17"],
+    ["2027-10-22", "2027-10-24"],
+    ["2027-11-12", "2027-11-14"]
+  ]
+};
+
+(function () {
+  const MESES = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
+  const SEMANA = ["D","S","T","Q","Q","S","S"];
+  const MESES_A_FRENTE = 13;
+
+  const pad = n => String(n).padStart(2, "0");
+  const key = (y, m, d) => y + "-" + pad(m + 1) + "-" + pad(d);
+  const parse = s => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); };
+
+  const ocupadas = new Set();
+  for (const p of OCUPACAO.periodos) {
+    const ini = parse(p[0]), fim = parse(p[1] || p[0]);
+    for (let d = new Date(ini); d <= fim; d.setDate(d.getDate() + 1)) {
+      ocupadas.add(key(d.getFullYear(), d.getMonth(), d.getDate()));
+    }
+  }
+
+  const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+  const hojeKey = key(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+  const base = { y: hoje.getFullYear(), m: hoje.getMonth() };
+  let offset = 0;
+
+  const grid = document.getElementById("cal-grid");
+  const title = document.getElementById("cal-month");
+  const prev = document.getElementById("cal-prev");
+  const next = document.getElementById("cal-next");
+
+  function render() {
+    const first = new Date(base.y, base.m + offset, 1);
+    const y = first.getFullYear(), m = first.getMonth();
+    const dias = new Date(y, m + 1, 0).getDate();
+    title.textContent = MESES[m].charAt(0).toUpperCase() + MESES[m].slice(1) + " de " + y;
+    prev.disabled = offset === 0;
+    next.disabled = offset === MESES_A_FRENTE;
+
+    const frag = document.createDocumentFragment();
+    SEMANA.forEach(w => { const e = document.createElement("div"); e.className = "cal-wd"; e.textContent = w; e.setAttribute("aria-hidden", "true"); frag.appendChild(e); });
+    for (let i = 0; i < first.getDay(); i++) frag.appendChild(document.createElement("div"));
+    for (let d = 1; d <= dias; d++) {
+      const k = key(y, m, d);
+      const e = document.createElement("div");
+      const busy = ocupadas.has(k);
+      const past = k < hojeKey;
+      e.className = "cal-day" + (busy ? " busy" : "") + (past ? " past" : "") + (k === hojeKey ? " today" : "");
+      e.textContent = d;
+      e.setAttribute("role", "img");
+      e.setAttribute("aria-label", d + " de " + MESES[m] + (past ? ", já passou" : busy ? ", ocupado" : ", disponível"));
+      frag.appendChild(e);
+    }
+    grid.replaceChildren(frag);
+  }
+
+  prev.addEventListener("click", () => { if (offset > 0) { offset--; render(); } });
+  next.addEventListener("click", () => { if (offset < MESES_A_FRENTE) { offset++; render(); } });
+
+  if (OCUPACAO.atualizado) {
+    const a = parse(OCUPACAO.atualizado);
+    document.getElementById("cal-note").textContent =
+      "Atualizado em " + pad(a.getDate()) + "/" + pad(a.getMonth() + 1) + ". A confirmação final é feita pelo WhatsApp.";
+  }
+  render();
+})();
+</script>
 </body>
 </html>
